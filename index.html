@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>독서실 관리 시스템</title>
+  <link rel="stylesheet" href="src/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <i class="fas fa-book-open"></i>
+        <span class="logo-text">독서실 Manager</span>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+      </button>
+    </div>
+    <nav class="sidebar-nav">
+      <ul>
+        <li class="nav-item active" data-page="dashboard">
+          <a href="#"><i class="fas fa-chart-pie"></i><span>대시보드</span></a>
+        </li>
+        <li class="nav-item" data-page="seats">
+          <a href="#"><i class="fas fa-chair"></i><span>좌석 현황</span></a>
+        </li>
+        <li class="nav-item" data-page="members">
+          <a href="#"><i class="fas fa-users"></i><span>회원 관리</span></a>
+        </li>
+        <li class="nav-item" data-page="payment">
+          <a href="#"><i class="fas fa-credit-card"></i><span>수납 관리</span></a>
+        </li>
+        <li class="nav-item" data-page="locker">
+          <a href="#"><i class="fas fa-lock"></i><span>락커 관리</span></a>
+        </li>
+        <li class="nav-item" data-page="settings">
+          <a href="#"><i class="fas fa-cog"></i><span>설정</span></a>
+        </li>
+      </ul>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="admin-info">
+        <div class="avatar"><i class="fas fa-user-shield"></i></div>
+        <div class="admin-detail">
+          <span class="admin-name">관리자</span>
+          <span class="admin-role">Admin</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content" id="mainContent">
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="mobile-toggle" id="mobileToggle"><i class="fas fa-bars"></i></button>
+        <h1 class="page-title" id="pageTitle">대시보드</h1>
+      </div>
+      <div class="topbar-right">
+        <div class="current-time" id="currentTime"></div>
+        <button class="btn btn-primary btn-sm" id="quickSeatBtn">
+          <i class="fas fa-plus"></i> 빠른 좌석 배정
+        </button>
+      </div>
+    </header>
+
+    <!-- Pages -->
+    <div class="page-content">
+
+      <!-- ===== DASHBOARD PAGE ===== -->
+      <section class="page active" id="page-dashboard">
+        <div class="stats-grid">
+          <div class="stat-card blue">
+            <div class="stat-icon"><i class="fas fa-chair"></i></div>
+            <div class="stat-info">
+              <h3 class="stat-value" id="stat-occupied">0</h3>
+              <p class="stat-label">현재 이용 좌석</p>
+            </div>
+            <div class="stat-change"><span id="stat-occupied-pct">0%</span> 점유율</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-icon"><i class="fas fa-user-check"></i></div>
+            <div class="stat-info">
+              <h3 class="stat-value" id="stat-members">0</h3>
+              <p class="stat-label">총 회원 수</p>
+            </div>
+            <div class="stat-change">활성 회원</div>
+          </div>
+          <div class="stat-card orange">
+            <div class="stat-icon"><i class="fas fa-won-sign"></i></div>
+            <div class="stat-info">
+              <h3 class="stat-value" id="stat-revenue">0</h3>
+              <p class="stat-label">이번 달 수납</p>
+            </div>
+            <div class="stat-change">원</div>
+          </div>
+          <div class="stat-card red">
+            <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="stat-info">
+              <h3 class="stat-value" id="stat-expiring">0</h3>
+              <p class="stat-label">만료 임박</p>
+            </div>
+            <div class="stat-change">7일 이내</div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header">
+              <h2><i class="fas fa-chair"></i> 좌석 현황 미리보기</h2>
+              <button class="btn btn-ghost btn-sm" data-nav="seats">전체보기 →</button>
+            </div>
+            <div class="card-body">
+              <div class="mini-seat-map" id="miniSeatMap"></div>
+              <div class="seat-legend">
+                <span class="legend-item"><span class="dot available"></span>이용 가능</span>
+                <span class="legend-item"><span class="dot occupied"></span>이용 중</span>
+                <span class="legend-item"><span class="dot reserved"></span>예약</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2><i class="fas fa-bell"></i> 알림 & 만료 예정</h2>
+            </div>
+            <div class="card-body">
+              <ul class="notification-list" id="notificationList"></ul>
+            </div>
+          </div>
+
+          <div class="card full-width">
+            <div class="card-header">
+              <h2><i class="fas fa-history"></i> 최근 이용 내역</h2>
+            </div>
+            <div class="card-body">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>회원명</th>
+                    <th>좌석번호</th>
+                    <th>입실 시간</th>
+                    <th>상태</th>
+                  </tr>
+                </thead>
+                <tbody id="recentActivity"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SEATS PAGE ===== -->
+      <section class="page" id="page-seats">
+        <div class="page-actions">
+          <div class="filter-group">
+            <button class="filter-btn active" data-filter="all">전체</button>
+            <button class="filter-btn" data-filter="available">이용 가능</button>
+            <button class="filter-btn" data-filter="occupied">이용 중</button>
+            <button class="filter-btn" data-filter="reserved">예약</button>
+          </div>
+          <div class="action-group">
+            <span class="seat-summary" id="seatSummary"></span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2><i class="fas fa-map"></i> 좌석 배치도</h2>
+            <div class="seat-legend">
+              <span class="legend-item"><span class="dot available"></span>이용 가능</span>
+              <span class="legend-item"><span class="dot occupied"></span>이용 중</span>
+              <span class="legend-item"><span class="dot reserved"></span>예약</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="seat-map-container">
+              <div class="seat-zone-label">앞쪽 (칠판/스크린)</div>
+              <div class="seat-map" id="seatMap"></div>
+              <div class="seat-zone-label bottom">뒤쪽 (출입구)</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== MEMBERS PAGE ===== -->
+      <section class="page" id="page-members">
+        <div class="page-actions">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="memberSearch" placeholder="회원 이름, 연락처 검색..." />
+          </div>
+          <button class="btn btn-primary" id="addMemberBtn">
+            <i class="fas fa-user-plus"></i> 회원 등록
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2><i class="fas fa-users"></i> 회원 목록</h2>
+            <span class="badge" id="memberCount">0명</span>
+          </div>
+          <div class="card-body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>이름</th>
+                  <th>연락처</th>
+                  <th>좌석번호</th>
+                  <th>이용권</th>
+                  <th>만료일</th>
+                  <th>상태</th>
+                  <th>관리</th>
+                </tr>
+              </thead>
+              <tbody id="memberTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== PAYMENT PAGE ===== -->
+      <section class="page" id="page-payment">
+        <div class="page-actions">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="paymentSearch" placeholder="회원 이름 검색..." />
+          </div>
+          <button class="btn btn-primary" id="addPaymentBtn">
+            <i class="fas fa-plus"></i> 수납 등록
+          </button>
+        </div>
+
+        <div class="stats-grid compact">
+          <div class="stat-card blue">
+            <div class="stat-icon"><i class="fas fa-calendar-day"></i></div>
+            <div class="stat-info">
+              <h3 class="stat-value" id="pay-today">0</h3>
+              <p class="stat-label">오늘 수납 (원)</p>
+            </div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-icon"><i class="fas fa-calendar-week"></i></div>
+            <div class="stat-info">
+              <h3 class="stat-value" id="pay-week">0</h3>
+              <p class="stat-label">이번 주 수납 (원)</p>
+            </div>
+          </div>
+          <div class="stat-card orange">
+            <div class="stat-icon"><i class="fas fa-calendar-alt"></i></div>
+            <div class="stat-info">
+              <h3 class="stat-value" id="pay-month">0</h3>
+              <p class="stat-label">이번 달 수납 (원)</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2><i class="fas fa-receipt"></i> 수납 내역</h2>
+          </div>
+          <div class="card-body">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>날짜</th>
+                  <th>회원명</th>
+                  <th>이용권</th>
+                  <th>금액</th>
+                  <th>결제수단</th>
+                  <th>메모</th>
+                  <th>관리</th>
+                </tr>
+              </thead>
+              <tbody id="paymentTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== LOCKER PAGE ===== -->
+      <section class="page" id="page-locker">
+        <div class="page-actions">
+          <div class="action-group">
+            <span class="seat-summary" id="lockerSummary"></span>
+          </div>
+          <button class="btn btn-primary" id="assignLockerBtn">
+            <i class="fas fa-lock"></i> 락커 배정
+          </button>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h2><i class="fas fa-lock"></i> 락커 현황</h2>
+            <div class="seat-legend">
+              <span class="legend-item"><span class="dot available"></span>사용 가능</span>
+              <span class="legend-item"><span class="dot occupied"></span>사용 중</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="locker-grid" id="lockerGrid"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SETTINGS PAGE ===== -->
+      <section class="page" id="page-settings">
+        <div class="settings-grid">
+          <div class="card">
+            <div class="card-header"><h2><i class="fas fa-store"></i> 독서실 정보</h2></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>독서실 이름</label>
+                <input type="text" class="form-control" id="studyRoomName" value="열공 독서실" />
+              </div>
+              <div class="form-group">
+                <label>주소</label>
+                <input type="text" class="form-control" id="studyRoomAddress" value="서울시 강남구 테헤란로 123" />
+              </div>
+              <div class="form-group">
+                <label>연락처</label>
+                <input type="text" class="form-control" id="studyRoomPhone" value="02-1234-5678" />
+              </div>
+              <div class="form-group">
+                <label>운영시간</label>
+                <div class="time-range">
+                  <input type="time" class="form-control" value="06:00" />
+                  <span>~</span>
+                  <input type="time" class="form-control" value="24:00" />
+                </div>
+              </div>
+              <button class="btn btn-primary" onclick="alert('저장되었습니다.')">
+                <i class="fas fa-save"></i> 저장
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h2><i class="fas fa-ticket-alt"></i> 이용권 요금 설정</h2></div>
+            <div class="card-body">
+              <div id="ticketPriceList"></div>
+              <button class="btn btn-outline btn-sm" onclick="addTicketRow()">
+                <i class="fas fa-plus"></i> 요금 추가
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h2><i class="fas fa-chair"></i> 좌석 설정</h2></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>총 좌석 수</label>
+                <input type="number" class="form-control" id="totalSeats" value="60" min="1" max="200" />
+              </div>
+              <div class="form-group">
+                <label>열당 좌석 수</label>
+                <input type="number" class="form-control" id="seatsPerRow" value="10" min="1" max="20" />
+              </div>
+              <button class="btn btn-primary" onclick="applySeatsSettings()">
+                <i class="fas fa-sync"></i> 적용
+              </button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><h2><i class="fas fa-lock"></i> 락커 설정</h2></div>
+            <div class="card-body">
+              <div class="form-group">
+                <label>총 락커 수</label>
+                <input type="number" class="form-control" id="totalLockers" value="30" min="1" max="100" />
+              </div>
+              <div class="form-group">
+                <label>락커 월 이용료</label>
+                <input type="number" class="form-control" id="lockerPrice" value="5000" />
+              </div>
+              <button class="btn btn-primary" onclick="applyLockerSettings()">
+                <i class="fas fa-sync"></i> 적용
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /page-content -->
+  </main>
+
+  <!-- ===== MODALS ===== -->
+
+  <!-- Seat Modal -->
+  <div class="modal-overlay" id="seatModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="seatModalTitle">좌석 정보</h3>
+        <button class="modal-close" onclick="closeModal('seatModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="seatModalBody"></div>
+    </div>
+  </div>
+
+  <!-- Member Modal -->
+  <div class="modal-overlay" id="memberModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="memberModalTitle">회원 등록</h3>
+        <button class="modal-close" onclick="closeModal('memberModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="memberForm">
+          <input type="hidden" id="memberId" />
+          <div class="form-row">
+            <div class="form-group">
+              <label>이름 <span class="required">*</span></label>
+              <input type="text" class="form-control" id="memberName" placeholder="홍길동" required />
+            </div>
+            <div class="form-group">
+              <label>연락처 <span class="required">*</span></label>
+              <input type="tel" class="form-control" id="memberPhone" placeholder="010-0000-0000" required />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>좌석번호</label>
+              <input type="text" class="form-control" id="memberSeat" placeholder="예: 15" />
+            </div>
+            <div class="form-group">
+              <label>이용권</label>
+              <select class="form-control" id="memberTicket">
+                <option value="">선택</option>
+                <option value="1일권">1일권</option>
+                <option value="1주일권">1주일권</option>
+                <option value="1개월권">1개월권</option>
+                <option value="3개월권">3개월권</option>
+                <option value="6개월권">6개월권</option>
+                <option value="1년권">1년권</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>시작일</label>
+              <input type="date" class="form-control" id="memberStart" />
+            </div>
+            <div class="form-group">
+              <label>만료일</label>
+              <input type="date" class="form-control" id="memberExpiry" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>메모</label>
+            <textarea class="form-control" id="memberMemo" rows="2" placeholder="특이사항 입력..."></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-ghost" onclick="closeModal('memberModal')">취소</button>
+            <button type="submit" class="btn btn-primary">저장</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Modal -->
+  <div class="modal-overlay" id="paymentModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="paymentModalTitle">수납 등록</h3>
+        <button class="modal-close" onclick="closeModal('paymentModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <form id="paymentForm">
+          <input type="hidden" id="paymentId" />
+          <div class="form-row">
+            <div class="form-group">
+              <label>회원 선택 <span class="required">*</span></label>
+              <select class="form-control" id="paymentMember" required>
+                <option value="">회원 선택</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>이용권 <span class="required">*</span></label>
+              <select class="form-control" id="paymentTicket" required>
+                <option value="">선택</option>
+                <option value="1일권">1일권 (3,000원)</option>
+                <option value="1주일권">1주일권 (15,000원)</option>
+                <option value="1개월권">1개월권 (50,000원)</option>
+                <option value="3개월권">3개월권 (130,000원)</option>
+                <option value="6개월권">6개월권 (240,000원)</option>
+                <option value="1년권">1년권 (430,000원)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>금액 <span class="required">*</span></label>
+              <input type="number" class="form-control" id="paymentAmount" placeholder="50000" required />
+            </div>
+            <div class="form-group">
+              <label>결제수단</label>
+              <select class="form-control" id="paymentMethod">
+                <option value="현금">현금</option>
+                <option value="카드">카드</option>
+                <option value="계좌이체">계좌이체</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>날짜</label>
+            <input type="date" class="form-control" id="paymentDate" />
+          </div>
+          <div class="form-group">
+            <label>메모</label>
+            <input type="text" class="form-control" id="paymentMemo" placeholder="메모 입력..." />
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-ghost" onclick="closeModal('paymentModal')">취소</button>
+            <button type="submit" class="btn btn-primary">저장</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Locker Modal -->
+  <div class="modal-overlay" id="lockerModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="lockerModalTitle">락커 정보</h3>
+        <button class="modal-close" onclick="closeModal('lockerModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body" id="lockerModalBody"></div>
+    </div>
+  </div>
+
+  <!-- Quick Seat Assignment Modal -->
+  <div class="modal-overlay" id="quickSeatModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>빠른 좌석 배정</h3>
+        <button class="modal-close" onclick="closeModal('quickSeatModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>회원 선택</label>
+          <select class="form-control" id="quickMember">
+            <option value="">회원 선택</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>좌석 번호</label>
+          <input type="number" class="form-control" id="quickSeatNumber" placeholder="좌석 번호 입력" min="1" />
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" onclick="closeModal('quickSeatModal')">취소</button>
+          <button type="button" class="btn btn-primary" onclick="assignQuickSeat()">배정</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 id="confirmTitle">확인</h3>
+        <button class="modal-close" onclick="closeModal('confirmModal')"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p id="confirmMessage"></p>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" onclick="closeModal('confirmModal')">취소</button>
+          <button type="button" class="btn btn-danger" id="confirmBtn">삭제</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="src/js/app.js"></script>
+</body>
+</html>
