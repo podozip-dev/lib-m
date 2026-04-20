@@ -243,11 +243,113 @@ function renderDashboard() {
   }).length;
   $('stat-expiring').textContent = expiring;
 
-  // Mini seat map
+  // Mini seat map — SEAT_LAYOUT 배치 그대로, 회원 좌석번호/상태 연동
   const mini = $('miniSeatMap');
-  mini.innerHTML = state.seats.map(s =>
-    `<div class="mini-seat ${s.status}" title="${s.id}번 좌석${s.memberName ? ' - '+s.memberName : ''}"></div>`
-  ).join('');
+
+  // 회원 테이블로부터 좌석 상태 동기화
+  state.members.forEach(m => {
+    if (m.seatNo) {
+      const seat = state.seats.find(s => s.id === Number(m.seatNo));
+      if (seat && seat.status === 'available') {
+        seat.status = 'occupied';
+        seat.memberName = m.name;
+        seat.memberId = m.id;
+      }
+    }
+  });
+
+  // SEAT_LAYOUT 순서대로 구역 렌더링
+  let miniHtml = '<div class="mini-layout">';
+  // 상단 행
+  miniHtml += '<div class="mini-row-top">';
+  // 좌상단 (zone-top-left)
+  miniHtml += '<div class="mini-zone">';
+  SEAT_LAYOUT.find(z => z.id === 'zone-top-left').rows.forEach(row => {
+    miniHtml += '<div class="mini-row">';
+    row.forEach(id => {
+      const s = state.seats.find(s => s.id === id) || { id, status: 'available', memberName: '' };
+      const member = state.members.find(m => Number(m.seatNo) === id);
+      const st = member ? (s.status !== 'available' ? s.status : 'occupied') : s.status;
+      const label = member ? member.name : (s.memberName || '');
+      miniHtml += `<div class="mini-seat ${st}" title="${id}번 좌석${label ? ' · ' + label : ''}"><span>${id}</span></div>`;
+    });
+    miniHtml += '</div>';
+  });
+  miniHtml += '</div>';
+  miniHtml += '<div class="mini-spacer"></div>';
+  // 우상단 (zone-top-right)
+  miniHtml += '<div class="mini-zone">';
+  SEAT_LAYOUT.find(z => z.id === 'zone-top-right').rows.forEach(row => {
+    miniHtml += '<div class="mini-row">';
+    row.forEach(id => {
+      const s = state.seats.find(s => s.id === id) || { id, status: 'available', memberName: '' };
+      const member = state.members.find(m => Number(m.seatNo) === id);
+      const st = member ? (s.status !== 'available' ? s.status : 'occupied') : s.status;
+      const label = member ? member.name : (s.memberName || '');
+      miniHtml += `<div class="mini-seat ${st}" title="${id}번 좌석${label ? ' · ' + label : ''}"><span>${id}</span></div>`;
+    });
+    miniHtml += '</div>';
+  });
+  miniHtml += '</div>';
+  miniHtml += '</div>'; // mini-row-top
+
+  // 중단 행
+  miniHtml += '<div class="mini-row-mid">';
+  // 좌측 세로 묶음
+  miniHtml += '<div class="mini-col-left">';
+  ['zone-mid-left-a','zone-mid-left-b'].forEach(zid => {
+    miniHtml += '<div class="mini-zone">';
+    SEAT_LAYOUT.find(z => z.id === zid).rows.forEach(row => {
+      miniHtml += '<div class="mini-row">';
+      row.forEach(id => {
+        const s = state.seats.find(s => s.id === id) || { id, status: 'available', memberName: '' };
+        const member = state.members.find(m => Number(m.seatNo) === id);
+        const st = member ? (s.status !== 'available' ? s.status : 'occupied') : s.status;
+        const label = member ? member.name : (s.memberName || '');
+        miniHtml += `<div class="mini-seat ${st}" title="${id}번 좌석${label ? ' · ' + label : ''}"><span>${id}</span></div>`;
+      });
+      miniHtml += '</div>';
+    });
+    miniHtml += '</div>';
+  });
+  miniHtml += '</div>'; // mini-col-left
+  // 중앙/우측 구역들
+  ['zone-mid-center','zone-mid-right','zone-far-right'].forEach(zid => {
+    miniHtml += '<div class="mini-zone">';
+    SEAT_LAYOUT.find(z => z.id === zid).rows.forEach(row => {
+      miniHtml += '<div class="mini-row">';
+      row.forEach(id => {
+        const s = state.seats.find(s => s.id === id) || { id, status: 'available', memberName: '' };
+        const member = state.members.find(m => Number(m.seatNo) === id);
+        const st = member ? (s.status !== 'available' ? s.status : 'occupied') : s.status;
+        const label = member ? member.name : (s.memberName || '');
+        miniHtml += `<div class="mini-seat ${st}" title="${id}번 좌석${label ? ' · ' + label : ''}"><span>${id}</span></div>`;
+      });
+      miniHtml += '</div>';
+    });
+    miniHtml += '</div>';
+  });
+  miniHtml += '</div>'; // mini-row-mid
+
+  // 하단 행
+  miniHtml += '<div class="mini-row-bottom">';
+  miniHtml += '<div class="mini-zone">';
+  SEAT_LAYOUT.find(z => z.id === 'zone-bottom-left').rows.forEach(row => {
+    miniHtml += '<div class="mini-row">';
+    row.forEach(id => {
+      const s = state.seats.find(s => s.id === id) || { id, status: 'available', memberName: '' };
+      const member = state.members.find(m => Number(m.seatNo) === id);
+      const st = member ? (s.status !== 'available' ? s.status : 'occupied') : s.status;
+      const label = member ? member.name : (s.memberName || '');
+      miniHtml += `<div class="mini-seat ${st}" title="${id}번 좌석${label ? ' · ' + label : ''}"><span>${id}</span></div>`;
+    });
+    miniHtml += '</div>';
+  });
+  miniHtml += '</div>';
+  miniHtml += '</div>'; // mini-row-bottom
+
+  miniHtml += '</div>'; // mini-layout
+  mini.innerHTML = miniHtml;
 
   // Notifications
   const nl = $('notificationList');

@@ -428,43 +428,60 @@ body {
   z-index: 1;
 }
 
-/* Mini Seat Map for Dashboard */
+/* ===== Mini Seat Map (대시보드 - SEAT_LAYOUT 기반 배치 미러) ===== */
 .mini-seat-map {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 12px;
-  background: var(--surface2);
+  background: #1a2535;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border: 1px solid #2a3a50;
+  padding: 10px 12px;
+  overflow-x: auto;
 }
-.mini-seat {
-  width: 14px; height: 14px;
-  border-radius: 3px;
-  cursor: pointer;
+.mini-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 260px;
 }
-.mini-seat.available { background: var(--success); }
-.mini-seat.occupied { background: var(--info); }
-.mini-seat.reserved { background: var(--warning); }
+.mini-row-top  { display: flex; align-items: flex-start; gap: 0; }
+.mini-row-mid  { display: flex; align-items: flex-start; gap: 10px; }
+.mini-row-bottom { display: flex; }
+.mini-col-left { display: flex; flex-direction: column; gap: 8px; }
+.mini-spacer   { flex: 1; min-width: 8px; }
+.mini-zone     { display: flex; flex-direction: column; gap: 4px; }
+.mini-row      { display: flex; gap: 4px; }
 
-/* Mini Seat Map for Dashboard */
-.mini-seat-map {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 12px;
-  background: var(--surface2);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-}
 .mini-seat {
-  width: 14px; height: 14px;
-  border-radius: 3px;
+  width: 22px; height: 22px;
+  border-radius: 5px;
+  border: 1.5px solid transparent;
+  display: flex; align-items: center; justify-content: center;
   cursor: pointer;
+  transition: transform .15s;
+  flex-shrink: 0;
 }
-.mini-seat.available { background: var(--success); }
-.mini-seat.occupied { background: var(--info); }
-.mini-seat.reserved { background: var(--warning); }
+.mini-seat span {
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+}
+.mini-seat:hover { transform: scale(1.2); z-index: 1; }
+
+.mini-seat.available {
+  background: #7bcf5c;
+  border-color: #5ab83d;
+  color: #1a4010;
+}
+.mini-seat.occupied {
+  background: #4a6fd4;
+  border-color: #3a5bc4;
+  color: #fff;
+}
+.mini-seat.reserved {
+  background: #1a2535;
+  border-color: #d4a020;
+  color: #d4a020;
+}
 
 /* ===== Seat Legend ===== */
 .seat-legend {
