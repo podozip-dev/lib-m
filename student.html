@@ -10,242 +10,318 @@
 </head>
 <body>
 
-  <!-- ═══════════════════════════════════════════════
-       HEADER
-  ═══════════════════════════════════════════════ -->
-  <header class="s-header">
-    <div class="s-header-inner">
-      <div class="s-logo">
-        <i class="fas fa-book-open"></i>
-        <div>
-          <span class="s-logo-name" id="roomName">열공 독서실</span>
-          <span class="s-logo-sub">학생 이용 페이지</span>
-        </div>
-      </div>
-      <div class="s-header-right">
-        <div class="s-clock" id="sClock"></div>
-        <a href="index.html" class="s-admin-link" title="관리자 페이지">
-          <i class="fas fa-cog"></i>
-        </a>
-      </div>
-    </div>
-  </header>
+  <!-- ═══════════════════════════════════════════════════════
+       LOGIN SCREEN  (로그인 전 전체화면)
+  ═══════════════════════════════════════════════════════ -->
+  <div class="login-screen" id="loginScreen">
 
-  <!-- ═══════════════════════════════════════════════
-       MAIN
-  ═══════════════════════════════════════════════ -->
-  <main class="s-main">
-
-    <!-- ── 상태 배너 (탭 전환) ── -->
-    <div class="s-tabs">
-      <button class="s-tab active" data-tab="map">
-        <i class="fas fa-map-marked-alt"></i> 좌석 현황
-      </button>
-      <button class="s-tab" data-tab="checkin">
-        <i class="fas fa-sign-in-alt"></i> 입실 / 퇴실
-      </button>
-      <button class="s-tab" data-tab="myinfo">
-        <i class="fas fa-user-circle"></i> 내 정보 조회
-      </button>
+    <!-- 배경 장식 -->
+    <div class="login-bg-deco">
+      <div class="deco-circle c1"></div>
+      <div class="deco-circle c2"></div>
+      <div class="deco-circle c3"></div>
     </div>
 
-    <!-- ══════════════════════════════════════
-         탭 1 : 좌석 현황 지도
-    ══════════════════════════════════════ -->
-    <section class="s-panel active" id="tab-map">
-      <!-- 요약 바 -->
-      <div class="s-summary-bar" id="sSummaryBar">
-        <div class="s-summary-item avail">
-          <i class="fas fa-chair"></i>
-          <span id="s-avail-cnt">0</span>
-          <small>이용 가능</small>
+    <div class="login-card" id="loginCard">
+
+      <!-- 로고 -->
+      <div class="login-logo">
+        <div class="login-logo-icon"><i class="fas fa-book-open"></i></div>
+        <h1 class="login-room-name" id="loginRoomName">열공 독서실</h1>
+        <p class="login-room-sub">학생 이용 페이지 로그인</p>
+      </div>
+
+      <!-- 스텝 1 : 이름 입력 -->
+      <div class="login-step" id="stepName">
+        <div class="login-step-label">
+          <span class="login-step-num">1</span> 이름을 입력해주세요
         </div>
-        <div class="s-summary-item occ">
+        <div class="login-name-input-wrap">
           <i class="fas fa-user"></i>
-          <span id="s-occ-cnt">0</span>
-          <small>이용 중</small>
+          <input type="text" id="loginNameInput"
+            placeholder="홍길동"
+            maxlength="10"
+            autocomplete="off"
+            inputmode="text" />
+          <button class="login-name-clear" id="loginNameClearBtn" onclick="clearLoginName()" style="display:none">
+            <i class="fas fa-times-circle"></i>
+          </button>
         </div>
-        <div class="s-summary-item res">
-          <i class="fas fa-bookmark"></i>
-          <span id="s-res-cnt">0</span>
-          <small>예약</small>
+        <!-- 자동완성 드롭다운 -->
+        <ul class="login-suggest" id="loginSuggest"></ul>
+
+        <div class="login-divider"></div>
+
+        <div class="login-step-label">
+          <span class="login-step-num">2</span> 전화번호 끝 4자리
         </div>
-        <div class="s-summary-item total">
-          <i class="fas fa-th"></i>
-          <span id="s-total-cnt">48</span>
-          <small>전체 좌석</small>
+        <div class="login-phone-dots" id="loginPhoneDots">
+          <span class="pdot" id="pd0"></span>
+          <span class="pdot" id="pd1"></span>
+          <span class="pdot" id="pd2"></span>
+          <span class="pdot" id="pd3"></span>
         </div>
-      </div>
-
-      <!-- 범례 -->
-      <div class="s-legend">
-        <span class="s-legend-item avail"><span class="s-dot avail"></span>이용 가능</span>
-        <span class="s-legend-item occ"><span class="s-dot occ"></span>이용 중</span>
-        <span class="s-legend-item res"><span class="s-dot res"></span>예약</span>
-      </div>
-
-      <!-- 좌석 배치도 -->
-      <div class="s-map-wrap">
-        <div class="s-map-bg" id="sStudentMap"></div>
-      </div>
-    </section>
-
-    <!-- ══════════════════════════════════════
-         탭 2 : 입실 / 퇴실
-    ══════════════════════════════════════ -->
-    <section class="s-panel" id="tab-checkin">
-
-      <!-- 모드 선택 -->
-      <div class="s-mode-toggle">
-        <button class="s-mode-btn active" id="modeCheckinBtn" onclick="setMode('checkin')">
-          <i class="fas fa-sign-in-alt"></i> 입실
-        </button>
-        <button class="s-mode-btn" id="modeCheckoutBtn" onclick="setMode('checkout')">
-          <i class="fas fa-sign-out-alt"></i> 퇴실
-        </button>
-      </div>
-
-      <!-- 입실 폼 -->
-      <div class="s-form-card" id="checkinForm">
-        <div class="s-form-title"><i class="fas fa-sign-in-alt"></i> 입실 처리</div>
-        <p class="s-form-desc">연락처 뒷 4자리를 입력하면 자동으로 회원을 찾아 입실 처리합니다.</p>
-
-        <div class="s-input-group">
-          <label>연락처 뒷 4자리</label>
-          <div class="s-input-wrap">
-            <i class="fas fa-phone-alt"></i>
-            <input type="tel" id="checkinPhone" maxlength="4" placeholder="예: 1234"
-              inputmode="numeric" pattern="[0-9]*" autocomplete="off" />
-          </div>
-        </div>
-
-        <!-- 조회 결과 -->
-        <div class="s-result-box" id="checkinResult" style="display:none"></div>
 
         <!-- 숫자 패드 -->
-        <div class="s-numpad">
-          <button onclick="numpad('checkinPhone','1')">1</button>
-          <button onclick="numpad('checkinPhone','2')">2</button>
-          <button onclick="numpad('checkinPhone','3')">3</button>
-          <button onclick="numpad('checkinPhone','4')">4</button>
-          <button onclick="numpad('checkinPhone','5')">5</button>
-          <button onclick="numpad('checkinPhone','6')">6</button>
-          <button onclick="numpad('checkinPhone','7')">7</button>
-          <button onclick="numpad('checkinPhone','8')">8</button>
-          <button onclick="numpad('checkinPhone','9')">9</button>
-          <button onclick="numpadClear('checkinPhone')" class="btn-clear">C</button>
-          <button onclick="numpad('checkinPhone','0')">0</button>
-          <button onclick="numpadBack('checkinPhone')" class="btn-back"><i class="fas fa-backspace"></i></button>
+        <div class="login-numpad">
+          <button onclick="loginNumpad('1')">1</button>
+          <button onclick="loginNumpad('2')">2</button>
+          <button onclick="loginNumpad('3')">3</button>
+          <button onclick="loginNumpad('4')">4</button>
+          <button onclick="loginNumpad('5')">5</button>
+          <button onclick="loginNumpad('6')">6</button>
+          <button onclick="loginNumpad('7')">7</button>
+          <button onclick="loginNumpad('8')">8</button>
+          <button onclick="loginNumpad('9')">9</button>
+          <button onclick="loginNumpadClear()" class="lnp-clear">C</button>
+          <button onclick="loginNumpad('0')">0</button>
+          <button onclick="loginNumpadBack()" class="lnp-back"><i class="fas fa-backspace"></i></button>
         </div>
 
-        <button class="s-btn-main" onclick="doCheckin()">
-          <i class="fas fa-sign-in-alt"></i> 입실 확인
+        <!-- 에러 메시지 -->
+        <div class="login-error" id="loginError" style="display:none"></div>
+
+        <button class="login-btn" onclick="doLogin()">
+          <i class="fas fa-sign-in-alt"></i> 로그인
         </button>
       </div>
 
-      <!-- 퇴실 폼 -->
-      <div class="s-form-card" id="checkoutForm" style="display:none">
-        <div class="s-form-title"><i class="fas fa-sign-out-alt"></i> 퇴실 처리</div>
-        <p class="s-form-desc">연락처 뒷 4자리를 입력하면 현재 이용 중인 좌석을 퇴실 처리합니다.</p>
+    </div><!-- /login-card -->
 
-        <div class="s-input-group">
-          <label>연락처 뒷 4자리</label>
-          <div class="s-input-wrap">
-            <i class="fas fa-phone-alt"></i>
-            <input type="tel" id="checkoutPhone" maxlength="4" placeholder="예: 1234"
-              inputmode="numeric" pattern="[0-9]*" autocomplete="off" />
+    <!-- 관리자 바로가기 -->
+    <a href="index.html" class="login-admin-link">
+      <i class="fas fa-shield-alt"></i> 관리자 페이지
+    </a>
+  </div><!-- /login-screen -->
+
+
+  <!-- ═══════════════════════════════════════════════════════
+       APP SCREEN  (로그인 후 메인)
+  ═══════════════════════════════════════════════════════ -->
+  <div class="app-screen" id="appScreen" style="display:none">
+
+    <!-- HEADER -->
+    <header class="s-header">
+      <div class="s-header-inner">
+        <div class="s-logo">
+          <i class="fas fa-book-open"></i>
+          <div>
+            <span class="s-logo-name" id="roomName">열공 독서실</span>
+            <span class="s-logo-sub">학생 이용 페이지</span>
           </div>
         </div>
-
-        <div class="s-result-box" id="checkoutResult" style="display:none"></div>
-
-        <div class="s-numpad">
-          <button onclick="numpad('checkoutPhone','1')">1</button>
-          <button onclick="numpad('checkoutPhone','2')">2</button>
-          <button onclick="numpad('checkoutPhone','3')">3</button>
-          <button onclick="numpad('checkoutPhone','4')">4</button>
-          <button onclick="numpad('checkoutPhone','5')">5</button>
-          <button onclick="numpad('checkoutPhone','6')">6</button>
-          <button onclick="numpad('checkoutPhone','7')">7</button>
-          <button onclick="numpad('checkoutPhone','8')">8</button>
-          <button onclick="numpad('checkoutPhone','9')">9</button>
-          <button onclick="numpadClear('checkoutPhone')" class="btn-clear">C</button>
-          <button onclick="numpad('checkoutPhone','0')">0</button>
-          <button onclick="numpadBack('checkoutPhone')" class="btn-back"><i class="fas fa-backspace"></i></button>
+        <div class="s-header-right">
+          <div class="s-clock" id="sClock"></div>
+          <!-- 로그인 유저 표시 + 로그아웃 -->
+          <div class="s-user-badge" id="sUserBadge">
+            <i class="fas fa-user-circle"></i>
+            <span id="sUserName">-</span>
+          </div>
+          <button class="s-logout-btn" onclick="doLogout()" title="로그아웃">
+            <i class="fas fa-sign-out-alt"></i>
+          </button>
+          <a href="index.html" class="s-admin-link" title="관리자 페이지">
+            <i class="fas fa-cog"></i>
+          </a>
         </div>
+      </div>
+    </header>
 
-        <button class="s-btn-main checkout" onclick="doCheckout()">
-          <i class="fas fa-sign-out-alt"></i> 퇴실 확인
+    <!-- MAIN -->
+    <main class="s-main">
+
+      <!-- 탭 -->
+      <div class="s-tabs">
+        <button class="s-tab active" data-tab="map">
+          <i class="fas fa-map-marked-alt"></i> 좌석 현황
+        </button>
+        <button class="s-tab" data-tab="checkin">
+          <i class="fas fa-sign-in-alt"></i> 입실 / 퇴실
+        </button>
+        <button class="s-tab" data-tab="myinfo">
+          <i class="fas fa-user-circle"></i> 내 정보
         </button>
       </div>
 
-    </section>
-
-    <!-- ══════════════════════════════════════
-         탭 3 : 내 정보 조회
-    ══════════════════════════════════════ -->
-    <section class="s-panel" id="tab-myinfo">
-      <div class="s-form-card">
-        <div class="s-form-title"><i class="fas fa-user-circle"></i> 내 정보 조회</div>
-        <p class="s-form-desc">연락처 뒷 4자리를 입력하여 이용권 및 좌석 정보를 확인하세요.</p>
-
-        <div class="s-input-group">
-          <label>연락처 뒷 4자리</label>
-          <div class="s-input-wrap">
-            <i class="fas fa-phone-alt"></i>
-            <input type="tel" id="myinfoPhone" maxlength="4" placeholder="예: 1234"
-              inputmode="numeric" pattern="[0-9]*" autocomplete="off" />
+      <!-- ── 탭 1 : 좌석 현황 ── -->
+      <section class="s-panel active" id="tab-map">
+        <div class="s-summary-bar">
+          <div class="s-summary-item avail">
+            <i class="fas fa-chair"></i>
+            <span id="s-avail-cnt">0</span>
+            <small>이용 가능</small>
+          </div>
+          <div class="s-summary-item occ">
+            <i class="fas fa-user"></i>
+            <span id="s-occ-cnt">0</span>
+            <small>이용 중</small>
+          </div>
+          <div class="s-summary-item res">
+            <i class="fas fa-bookmark"></i>
+            <span id="s-res-cnt">0</span>
+            <small>예약</small>
+          </div>
+          <div class="s-summary-item total">
+            <i class="fas fa-th"></i>
+            <span id="s-total-cnt">48</span>
+            <small>전체 좌석</small>
           </div>
         </div>
+        <div class="s-legend">
+          <span class="s-legend-item avail"><span class="s-dot avail"></span>이용 가능</span>
+          <span class="s-legend-item occ"><span class="s-dot occ"></span>이용 중</span>
+          <span class="s-legend-item res"><span class="s-dot res"></span>예약</span>
+        </div>
+        <div class="s-map-wrap">
+          <div class="s-map-bg" id="sStudentMap"></div>
+        </div>
+      </section>
 
-        <div class="s-numpad">
-          <button onclick="numpad('myinfoPhone','1')">1</button>
-          <button onclick="numpad('myinfoPhone','2')">2</button>
-          <button onclick="numpad('myinfoPhone','3')">3</button>
-          <button onclick="numpad('myinfoPhone','4')">4</button>
-          <button onclick="numpad('myinfoPhone','5')">5</button>
-          <button onclick="numpad('myinfoPhone','6')">6</button>
-          <button onclick="numpad('myinfoPhone','7')">7</button>
-          <button onclick="numpad('myinfoPhone','8')">8</button>
-          <button onclick="numpad('myinfoPhone','9')">9</button>
-          <button onclick="numpadClear('myinfoPhone')" class="btn-clear">C</button>
-          <button onclick="numpad('myinfoPhone','0')">0</button>
-          <button onclick="numpadBack('myinfoPhone')" class="btn-back"><i class="fas fa-backspace"></i></button>
+      <!-- ── 탭 2 : 입실 / 퇴실 ── -->
+      <section class="s-panel" id="tab-checkin">
+        <div class="s-mode-toggle">
+          <button class="s-mode-btn active" id="modeCheckinBtn" onclick="setMode('checkin')">
+            <i class="fas fa-sign-in-alt"></i> 입실
+          </button>
+          <button class="s-mode-btn" id="modeCheckoutBtn" onclick="setMode('checkout')">
+            <i class="fas fa-sign-out-alt"></i> 퇴실
+          </button>
         </div>
 
-        <button class="s-btn-main info" onclick="doMyInfo()">
-          <i class="fas fa-search"></i> 조회
-        </button>
+        <!-- 입실 -->
+        <div class="s-form-card" id="checkinForm">
+          <div class="s-form-title"><i class="fas fa-sign-in-alt"></i> 입실 처리</div>
+          <p class="s-form-desc">
+            로그인된 회원으로 바로 입실 처리하거나,<br>
+            다른 회원은 연락처 뒷 4자리로 처리할 수 있습니다.
+          </p>
+          <!-- 본인 빠른 입실 -->
+          <div class="quick-action-box" id="quickCheckinBox">
+            <div class="quick-action-info">
+              <i class="fas fa-user-check"></i>
+              <div>
+                <strong id="quickCheckinName">-</strong>
+                <span id="quickCheckinSeat">-</span>
+              </div>
+            </div>
+            <button class="quick-action-btn checkin" onclick="doSelfCheckin()">
+              <i class="fas fa-sign-in-alt"></i> 내 좌석 입실
+            </button>
+          </div>
 
-        <!-- 결과 카드 -->
-        <div id="myinfoResult" style="display:none"></div>
+          <div class="s-divider-text">또는 다른 회원</div>
+
+          <div class="s-input-group">
+            <label>연락처 뒷 4자리</label>
+            <div class="s-input-wrap">
+              <i class="fas fa-phone-alt"></i>
+              <input type="tel" id="checkinPhone" maxlength="4" placeholder="예: 1234"
+                inputmode="numeric" pattern="[0-9]*" autocomplete="off" />
+            </div>
+          </div>
+          <div class="s-result-box" id="checkinResult" style="display:none"></div>
+          <div class="s-numpad">
+            <button onclick="numpad('checkinPhone','1')">1</button>
+            <button onclick="numpad('checkinPhone','2')">2</button>
+            <button onclick="numpad('checkinPhone','3')">3</button>
+            <button onclick="numpad('checkinPhone','4')">4</button>
+            <button onclick="numpad('checkinPhone','5')">5</button>
+            <button onclick="numpad('checkinPhone','6')">6</button>
+            <button onclick="numpad('checkinPhone','7')">7</button>
+            <button onclick="numpad('checkinPhone','8')">8</button>
+            <button onclick="numpad('checkinPhone','9')">9</button>
+            <button onclick="numpadClear('checkinPhone')" class="btn-clear">C</button>
+            <button onclick="numpad('checkinPhone','0')">0</button>
+            <button onclick="numpadBack('checkinPhone')" class="btn-back"><i class="fas fa-backspace"></i></button>
+          </div>
+          <button class="s-btn-main" onclick="doCheckin()">
+            <i class="fas fa-sign-in-alt"></i> 입실 확인
+          </button>
+        </div>
+
+        <!-- 퇴실 -->
+        <div class="s-form-card" id="checkoutForm" style="display:none">
+          <div class="s-form-title"><i class="fas fa-sign-out-alt"></i> 퇴실 처리</div>
+          <p class="s-form-desc">로그인된 회원으로 바로 퇴실하거나, 연락처 뒷 4자리로 처리할 수 있습니다.</p>
+          <!-- 본인 빠른 퇴실 -->
+          <div class="quick-action-box" id="quickCheckoutBox">
+            <div class="quick-action-info">
+              <i class="fas fa-user-clock"></i>
+              <div>
+                <strong id="quickCheckoutName">-</strong>
+                <span id="quickCheckoutSeat">-</span>
+              </div>
+            </div>
+            <button class="quick-action-btn checkout" onclick="doSelfCheckout()">
+              <i class="fas fa-sign-out-alt"></i> 내 좌석 퇴실
+            </button>
+          </div>
+
+          <div class="s-divider-text">또는 다른 회원</div>
+
+          <div class="s-input-group">
+            <label>연락처 뒷 4자리</label>
+            <div class="s-input-wrap">
+              <i class="fas fa-phone-alt"></i>
+              <input type="tel" id="checkoutPhone" maxlength="4" placeholder="예: 1234"
+                inputmode="numeric" pattern="[0-9]*" autocomplete="off" />
+            </div>
+          </div>
+          <div class="s-result-box" id="checkoutResult" style="display:none"></div>
+          <div class="s-numpad">
+            <button onclick="numpad('checkoutPhone','1')">1</button>
+            <button onclick="numpad('checkoutPhone','2')">2</button>
+            <button onclick="numpad('checkoutPhone','3')">3</button>
+            <button onclick="numpad('checkoutPhone','4')">4</button>
+            <button onclick="numpad('checkoutPhone','5')">5</button>
+            <button onclick="numpad('checkoutPhone','6')">6</button>
+            <button onclick="numpad('checkoutPhone','7')">7</button>
+            <button onclick="numpad('checkoutPhone','8')">8</button>
+            <button onclick="numpad('checkoutPhone','9')">9</button>
+            <button onclick="numpadClear('checkoutPhone')" class="btn-clear">C</button>
+            <button onclick="numpad('checkoutPhone','0')">0</button>
+            <button onclick="numpadBack('checkoutPhone')" class="btn-back"><i class="fas fa-backspace"></i></button>
+          </div>
+          <button class="s-btn-main checkout" onclick="doCheckout()">
+            <i class="fas fa-sign-out-alt"></i> 퇴실 확인
+          </button>
+        </div>
+      </section>
+
+      <!-- ── 탭 3 : 내 정보 ── -->
+      <section class="s-panel" id="tab-myinfo">
+        <div class="s-form-card">
+          <div class="s-form-title"><i class="fas fa-user-circle"></i> 내 정보</div>
+          <div id="myinfoResult"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="s-footer">
+      <div class="s-footer-inner">
+        <div class="s-footer-info">
+          <span id="footerName">열공 독서실</span>
+          <span class="s-sep">|</span>
+          <span id="footerAddr">서울시 강남구 테헤란로 123</span>
+          <span class="s-sep">|</span>
+          <span id="footerPhone">02-1234-5678</span>
+        </div>
+        <div class="s-footer-time">
+          운영시간 <strong id="footerHours">06:00 ~ 24:00</strong>
+        </div>
       </div>
-    </section>
+    </footer>
 
-  </main>
+  </div><!-- /app-screen -->
 
-  <!-- ── 운영 정보 footer ── -->
-  <footer class="s-footer">
-    <div class="s-footer-inner">
-      <div class="s-footer-info">
-        <span id="footerName">열공 독서실</span>
-        <span class="s-sep">|</span>
-        <span id="footerAddr">서울시 강남구 테헤란로 123</span>
-        <span class="s-sep">|</span>
-        <span id="footerPhone">02-1234-5678</span>
-      </div>
-      <div class="s-footer-time">
-        운영시간 <strong id="footerHours">06:00 ~ 24:00</strong>
-      </div>
-    </div>
-  </footer>
-
-  <!-- ── 성공/완료 오버레이 ── -->
+  <!-- 성공/완료 오버레이 -->
   <div class="s-overlay" id="sOverlay" style="display:none">
-    <div class="s-overlay-box" id="sOverlayBox">
+    <div class="s-overlay-box">
       <div class="s-overlay-icon" id="sOverlayIcon"></div>
       <div class="s-overlay-title" id="sOverlayTitle"></div>
-      <div class="s-overlay-sub" id="sOverlaySub"></div>
+      <div class="s-overlay-sub"  id="sOverlaySub"></div>
       <button class="s-overlay-close" onclick="closeOverlay()">확인</button>
     </div>
   </div>
