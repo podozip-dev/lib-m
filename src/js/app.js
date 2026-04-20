@@ -8,7 +8,7 @@
 // STATE
 // ============================================================
 let state = {
-  totalSeats: 60,
+  totalSeats: 48,
   seatsPerRow: 10,
   totalLockers: 30,
   members: [],
@@ -17,6 +17,91 @@ let state = {
   lockers: [],    // { id, status: 'available'|'occupied', memberId, memberName, since }
   currentFilter: 'all',
 };
+
+// ============================================================
+// 48석 커스텀 좌석 배치 레이아웃
+// 각 구역은 { label, rows: [[seatId, ...], ...] } 형태
+// null = 빈칸(스페이서)
+// ============================================================
+const SEAT_LAYOUT = [
+  // ─── 구역 A: 우상단 (45~48) ─────────────────────────────
+  {
+    id: 'zone-top-right',
+    gridArea: 'top-right',
+    rows: [
+      [45, 46, 47, 48],
+    ],
+  },
+  // ─── 구역 B: 좌상단 (1~10) ──────────────────────────────
+  {
+    id: 'zone-top-left',
+    gridArea: 'top-left',
+    rows: [
+      [3, 2, 1],
+      [4, 5, 6, 7],
+      [10, 9, 8],
+    ],
+  },
+  // ─── 구역 C: 중앙 세로 (29~32) ──────────────────────────
+  {
+    id: 'zone-mid-center',
+    gridArea: 'mid-center',
+    rows: [
+      [32],
+      [31],
+      [30],
+      [29],
+    ],
+  },
+  // ─── 구역 D: 중앙 우측 2열 (33~40) ─────────────────────
+  {
+    id: 'zone-mid-right',
+    gridArea: 'mid-right',
+    rows: [
+      [33, 40],
+      [34, 39],
+      [35, 38],
+      [36, 37],
+    ],
+  },
+  // ─── 구역 E: 우측 끝 세로 (41~44) ──────────────────────
+  {
+    id: 'zone-far-right',
+    gridArea: 'far-right',
+    rows: [
+      [41],
+      [42],
+      [43],
+      [44],
+    ],
+  },
+  // ─── 구역 F: 좌중단 (11~17) ─────────────────────────────
+  {
+    id: 'zone-mid-left-a',
+    gridArea: 'mid-left-a',
+    rows: [
+      [11, 12, 13, 14],
+      [17, 16, 15],
+    ],
+  },
+  // ─── 구역 G: 좌하단상 (18~24) ───────────────────────────
+  {
+    id: 'zone-mid-left-b',
+    gridArea: 'mid-left-b',
+    rows: [
+      [18, 19, 20, 21],
+      [24, 23, 22],
+    ],
+  },
+  // ─── 구역 H: 맨아래 (25~28) ─────────────────────────────
+  {
+    id: 'zone-bottom-left',
+    gridArea: 'bottom-left',
+    rows: [
+      [25, 26, 27, 28],
+    ],
+  },
+];
 
 // ============================================================
 // UTILITY FUNCTIONS
@@ -67,10 +152,18 @@ function saveState() {
 function loadState() {
   const raw = localStorage.getItem('studyroom_state');
   if (raw) {
-    try { Object.assign(state, JSON.parse(raw)); }
+    try {
+      const saved = JSON.parse(raw);
+      // 48석 레이아웃으로 전환: 기존 60석 데이터는 좌석만 초기화
+      if (saved.totalSeats && saved.totalSeats !== 48) {
+        saved.seats = [];
+        saved.totalSeats = 48;
+      }
+      Object.assign(state, saved);
+    }
     catch(e) { console.error('State load error', e); }
   }
-  if (!state.seats.length) initSeats();
+  if (!state.seats.length || state.seats.length !== 48) initSeats();
   if (!state.lockers.length) initLockers();
 }
 
@@ -78,13 +171,14 @@ function loadState() {
 // INIT SEATS / LOCKERS
 // ============================================================
 function initSeats() {
-  state.seats = Array.from({ length: state.totalSeats }, (_, i) => ({
+  state.seats = Array.from({ length: 48 }, (_, i) => ({
     id: i + 1,
     status: 'available',
     memberId: null,
     memberName: null,
     since: null,
   }));
+  state.totalSeats = 48;
 }
 
 function initLockers() {
@@ -193,25 +287,115 @@ function renderDashboard() {
 }
 
 // ============================================================
-// SEAT MAP
+// SEAT MAP (커스텀 배치)
 // ============================================================
+function getSeat(id) {
+  return state.seats.find(s => s.id === id);
+}
+
+function renderSeatBtn(seatId, filter) {
+  const s = getSeat(seatId);
+  if (!s) return '';
+  const hidden = filter !== 'all' && s.status !== filter;
+  if (hidden) return `<button class="seat-btn ghost" disabled>${seatId}</button>`;
+  return `<button class="seat-btn ${s.status}" onclick="openSeatModal(${seatId})" title="${s.memberName || seatId + '번 좌석'}">${seatId}</button>`;
+}
+
 function renderSeatMap() {
   const map = $('seatMap');
   const filter = state.currentFilter;
-  const seats = filter === 'all' ? state.seats : state.seats.filter(s => s.status === filter);
 
-  map.innerHTML = state.seats.map(s => {
-    const show = filter === 'all' || s.status === filter;
-    if (!show) return `<div class="seat-btn" style="visibility:hidden;pointer-events:none">${s.id}</div>`;
-    return `<button class="seat-btn ${s.status}" onclick="openSeatModal(${s.id})" title="${s.memberName ? s.memberName : ''}">
-      ${s.id}
-    </button>`;
-  }).join('');
+  let html = '<div class="seat-layout">';
+
+  // ── 상단 행: 좌상단 구역 + 우상단 구역 ──
+  html += '<div class="seat-row-top">';
+
+  // 좌상단 (1~10)
+  html += '<div class="seat-zone">';
+  SEAT_LAYOUT.find(z => z.id === 'zone-top-left').rows.forEach(row => {
+    html += '<div class="seat-row">';
+    row.forEach(id => { html += renderSeatBtn(id, filter); });
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // 중간 스페이서
+  html += '<div class="seat-spacer"></div>';
+
+  // 우상단 (45~48)
+  html += '<div class="seat-zone zone-top-right">';
+  SEAT_LAYOUT.find(z => z.id === 'zone-top-right').rows.forEach(row => {
+    html += '<div class="seat-row">';
+    row.forEach(id => { html += renderSeatBtn(id, filter); });
+    html += '</div>';
+  });
+  html += '</div>';
+
+  html += '</div>'; // seat-row-top
+
+  // ── 중단 행: 좌중단 + 중앙 구역들 ──
+  html += '<div class="seat-row-mid">';
+
+  // 왼쪽 세로 묶음 (11~17, 18~24)
+  html += '<div class="seat-col-left">';
+  ['zone-mid-left-a', 'zone-mid-left-b'].forEach(zid => {
+    html += '<div class="seat-zone">';
+    SEAT_LAYOUT.find(z => z.id === zid).rows.forEach(row => {
+      html += '<div class="seat-row">';
+      row.forEach(id => { html += renderSeatBtn(id, filter); });
+      html += '</div>';
+    });
+    html += '</div>';
+  });
+  html += '</div>'; // seat-col-left
+
+  // 중앙 세로 (29~32)
+  html += '<div class="seat-zone zone-vertical">';
+  SEAT_LAYOUT.find(z => z.id === 'zone-mid-center').rows.forEach(row => {
+    html += '<div class="seat-row">';
+    row.forEach(id => { html += renderSeatBtn(id, filter); });
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // 중앙 우측 2열 (33~40)
+  html += '<div class="seat-zone zone-vertical">';
+  SEAT_LAYOUT.find(z => z.id === 'zone-mid-right').rows.forEach(row => {
+    html += '<div class="seat-row">';
+    row.forEach(id => { html += renderSeatBtn(id, filter); });
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // 우측 끝 세로 (41~44)
+  html += '<div class="seat-zone zone-vertical">';
+  SEAT_LAYOUT.find(z => z.id === 'zone-far-right').rows.forEach(row => {
+    html += '<div class="seat-row">';
+    row.forEach(id => { html += renderSeatBtn(id, filter); });
+    html += '</div>';
+  });
+  html += '</div>';
+
+  html += '</div>'; // seat-row-mid
+
+  // ── 하단 행: 맨아래 (25~28) ──
+  html += '<div class="seat-row-bottom">';
+  html += '<div class="seat-zone">';
+  SEAT_LAYOUT.find(z => z.id === 'zone-bottom-left').rows.forEach(row => {
+    html += '<div class="seat-row">';
+    row.forEach(id => { html += renderSeatBtn(id, filter); });
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '</div>'; // seat-row-bottom
+
+  html += '</div>'; // seat-layout
+  map.innerHTML = html;
 
   const occ = state.seats.filter(s => s.status === 'occupied').length;
   const avail = state.seats.filter(s => s.status === 'available').length;
   const res = state.seats.filter(s => s.status === 'reserved').length;
-  $('seatSummary').textContent = `전체 ${state.totalSeats}석 | 이용 중 ${occ} | 이용 가능 ${avail} | 예약 ${res}`;
+  $('seatSummary').textContent = `전체 48석 | 이용 중 ${occ} | 이용 가능 ${avail} | 예약 ${res}`;
 }
 
 // ============================================================
@@ -346,7 +530,7 @@ function assignQuickSeat() {
   const memberId = $('quickMember').value;
   const seatNo = parseInt($('quickSeatNumber').value);
   if (!memberId || !seatNo) { showToast('회원과 좌석번호를 입력하세요.', 'warning'); return; }
-  if (seatNo < 1 || seatNo > state.totalSeats) { showToast(`좌석번호는 1~${state.totalSeats} 사이여야 합니다.`, 'warning'); return; }
+  if (seatNo < 1 || seatNo > 48) { showToast('좌석번호는 1~48 사이여야 합니다.', 'warning'); return; }
   const seat = state.seats.find(s => s.id === seatNo);
   if (seat.status !== 'available') { showToast('해당 좌석은 이미 사용 중입니다.', 'error'); return; }
   const member = state.members.find(m => m.id == memberId);
@@ -768,13 +952,26 @@ function seedDemoData() {
     };
     state.members.push(member);
 
-    // Assign some seats
-    if (i < 10 && state.seats[i]) {
-      state.seats[i].status = i < 7 ? 'occupied' : 'reserved';
-      state.seats[i].memberId = id;
-      state.seats[i].memberName = name;
-      state.seats[i].since = new Date().toISOString();
-      member.seatNo = i + 1;
+    // 이미지 기반 좌석 배정 (이용 중: 45~48, 예약: 9,15,16,20,27)
+    const occupiedSeats = [45, 46, 47, 48];
+    const reservedSeats = [9, 15, 16, 20, 27];
+    const assignMap = [
+      { seatId: 45, idx: 0 }, { seatId: 46, idx: 1 },
+      { seatId: 47, idx: 2 }, { seatId: 48, idx: 3 },
+      { seatId: 9,  idx: 4 }, { seatId: 15, idx: 5 },
+      { seatId: 16, idx: 6 }, { seatId: 20, idx: 7 },
+      { seatId: 27, idx: 8 },
+    ];
+    const assign = assignMap.find(a => a.idx === i);
+    if (assign) {
+      const seat = state.seats.find(s => s.id === assign.seatId);
+      if (seat) {
+        seat.status = occupiedSeats.includes(assign.seatId) ? 'occupied' : 'reserved';
+        seat.memberId = id;
+        seat.memberName = name;
+        seat.since = new Date().toISOString();
+        member.seatNo = assign.seatId;
+      }
     }
 
     // Add payment records

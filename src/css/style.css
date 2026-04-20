@@ -296,9 +296,9 @@ body {
 .dashboard-grid .full-width { grid-column: 1 / -1; }
 
 /* ============================================================
-   SEAT MAP
+   SEAT MAP - 커스텀 배치도
    ============================================================ */
-.seat-map-container { text-align: center; }
+.seat-map-container { text-align: left; overflow-x: auto; }
 .seat-zone-label {
   font-size: 12px;
   color: var(--text-muted);
@@ -308,46 +308,144 @@ body {
 }
 .seat-zone-label.bottom { margin-top: 12px; }
 
+/* 전체 배치 래퍼 */
 .seat-map {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: center;
-  padding: 16px;
-  background: var(--surface2);
+  padding: 20px;
+  background: #1e2a3a;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  border: 1px solid #2d3d50;
+  min-width: 600px;
 }
 
+/* 레이아웃 구조 */
+.seat-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 상단 행: 좌상단 + 우상단 */
+.seat-row-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+
+/* 중단 행: 좌측 + 중앙 구역들 */
+.seat-row-mid {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+}
+
+/* 하단 행 */
+.seat-row-bottom {
+  display: flex;
+  align-items: flex-start;
+}
+
+/* 좌측 세로 묶음 컨테이너 */
+.seat-col-left {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 스페이서 */
+.seat-spacer { flex: 1; }
+
+/* 각 구역(zone) */
+.seat-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* 세로형 구역 (중앙/우측) */
+.seat-zone.zone-vertical {
+  gap: 6px;
+}
+
+/* 우상단 구역: 오른쪽 끝 정렬 */
+.zone-top-right {
+  margin-left: auto;
+}
+
+/* 각 행 */
+.seat-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+/* ===== 좌석 버튼 ===== */
 .seat-btn {
-  width: 42px; height: 42px;
+  width: 46px; height: 46px;
   border: 2px solid transparent;
-  border-radius: 8px;
-  font-size: 11px;
+  border-radius: 10px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: all var(--transition);
   position: relative;
+  flex-shrink: 0;
+  font-family: inherit;
 }
 
+/* 이용 가능 - 연두색 (이미지의 초록 좌석) */
 .seat-btn.available {
-  background: var(--success-light);
-  border-color: var(--success);
-  color: var(--success);
-}
-.seat-btn.occupied {
-  background: var(--info-light);
-  border-color: var(--info);
-  color: var(--info);
-}
-.seat-btn.reserved {
-  background: var(--warning-light);
-  border-color: var(--warning);
-  color: var(--warning);
+  background: #b8f0a0;
+  border-color: #7dd65a;
+  color: #2d6b1a;
 }
 
-.seat-btn:hover { transform: scale(1.1); box-shadow: var(--shadow); }
+/* 이용 중 - 파란색 (이미지의 파란 좌석) */
+.seat-btn.occupied {
+  background: #4a6fd4;
+  border-color: #3a5bc4;
+  color: #ffffff;
+}
+
+/* 예약 - 노란 테두리 (이미지의 주황 테두리) */
+.seat-btn.reserved {
+  background: #1e2a3a;
+  border-color: #d4a020;
+  color: #e0c060;
+}
+
+/* 필터 숨김 상태 */
+.seat-btn.ghost {
+  background: transparent;
+  border-color: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.15);
+  cursor: default;
+}
+
+.seat-btn:not(.ghost):hover {
+  transform: scale(1.12);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  z-index: 1;
+}
+
+/* Mini Seat Map for Dashboard */
+.mini-seat-map {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 12px;
+  background: var(--surface2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.mini-seat {
+  width: 14px; height: 14px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.mini-seat.available { background: var(--success); }
+.mini-seat.occupied { background: var(--info); }
+.mini-seat.reserved { background: var(--warning); }
 
 /* Mini Seat Map for Dashboard */
 .mini-seat-map {
