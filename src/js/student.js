@@ -209,7 +209,7 @@ function updatePhoneDots() {
 }
 
 /** 로그인 에러 표시 */
-function showLoginError(msg) {
+function showLoginError(msg, showRegister = false) {
   const el = document.getElementById('loginError');
   el.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${msg}`;
   el.style.display = 'flex';
@@ -217,13 +217,20 @@ function showLoginError(msg) {
   el.style.animation = 'none';
   el.offsetHeight; // reflow
   el.style.animation = '';
-  // 2.5초 후 자동 숨김
-  setTimeout(() => { el.style.display = 'none'; }, 2500);
+  // 회원등록 버튼 노출 여부
+  const wrap = document.getElementById('loginRegisterWrap');
+  if (wrap) wrap.style.display = showRegister ? '' : 'none';
+  // 자동 숨김은 하지 않음 (버튼이 함께 표시될 때는 유지)
+  if (!showRegister) {
+    setTimeout(() => { el.style.display = 'none'; }, 2500);
+  }
 }
 
 function hideLoginError() {
   const el = document.getElementById('loginError');
   if (el) el.style.display = 'none';
+  const wrap = document.getElementById('loginRegisterWrap');
+  if (wrap) wrap.style.display = 'none';
 }
 
 /** 로그인 처리 메인 */
@@ -254,9 +261,11 @@ function doLogin() {
     // 이름만 맞고 전화번호가 다른 경우 구분 메시지
     const nameOnly = gState.members.filter(m => m.name === name);
     if (nameOnly.length) {
-      showLoginError('전화번호가 일치하지 않습니다. 다시 확인해주세요.');
+      // 이름은 존재 → 전화번호 불일치 (등록 버튼 불필요)
+      showLoginError('전화번호가 일치하지 않습니다. 다시 확인해주세요.', false);
     } else {
-      showLoginError('이름 또는 전화번호가 올바르지 않습니다.');
+      // 이름 자체가 없음 → 미등록 회원 → 회원등록 버튼 노출
+      showLoginError('등록된 회원 정보가 없습니다. 회원 등록을 진행해주세요.', true);
     }
     loginPhoneDigits = '';
     updatePhoneDots();

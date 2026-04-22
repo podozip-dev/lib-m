@@ -84,9 +84,116 @@
         <button class="login-btn" onclick="doLogin()">
           <i class="fas fa-sign-in-alt"></i> 로그인
         </button>
+
+        <!-- 로그인 실패 시 노출되는 회원등록 버튼 -->
+        <div class="login-register-wrap" id="loginRegisterWrap" style="display:none">
+          <div class="login-register-divider">아직 회원이 아니신가요?</div>
+          <button class="login-register-btn" onclick="openRegisterModal()">
+            <i class="fas fa-user-plus"></i> 회원 등록
+          </button>
+        </div>
       </div>
 
     </div><!-- /login-card -->
+
+  <!-- ═══════════════════════════════════════════════════════
+       REGISTER MODAL  (회원 등록 팝업)
+  ═══════════════════════════════════════════════════════ -->
+  <div class="reg-overlay" id="regOverlay" style="display:none" onclick="closeRegisterModal(event)">
+    <div class="reg-modal" onclick="event.stopPropagation()">
+
+      <div class="reg-modal-header">
+        <div class="reg-modal-title">
+          <i class="fas fa-user-plus"></i> 회원 등록
+        </div>
+        <button class="reg-modal-close" onclick="closeRegisterModal()">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="reg-modal-body">
+        <p class="reg-modal-desc">
+          정보를 입력하시면 관리자가 확인 후 이용권을 등록해드립니다.
+        </p>
+
+        <form id="regForm" onsubmit="submitRegister(event)">
+
+          <div class="reg-form-row">
+            <div class="reg-form-group">
+              <label>이름 <span class="reg-required">*</span></label>
+              <div class="reg-input-wrap">
+                <i class="fas fa-user"></i>
+                <input type="text" id="regName" placeholder="홍길동"
+                  maxlength="10" autocomplete="off" required />
+              </div>
+            </div>
+            <div class="reg-form-group">
+              <label>연락처 <span class="reg-required">*</span></label>
+              <div class="reg-input-wrap">
+                <i class="fas fa-phone-alt"></i>
+                <input type="tel" id="regPhone" placeholder="010-0000-0000"
+                  autocomplete="off" required />
+              </div>
+            </div>
+          </div>
+
+          <div class="reg-form-row">
+            <div class="reg-form-group">
+              <label>이용권</label>
+              <div class="reg-input-wrap">
+                <i class="fas fa-ticket-alt"></i>
+                <select id="regTicket">
+                  <option value="">선택 (선택사항)</option>
+                  <option value="1일권">1일권</option>
+                  <option value="1주일권">1주일권</option>
+                  <option value="1개월권">1개월권</option>
+                  <option value="3개월권">3개월권</option>
+                  <option value="6개월권">6개월권</option>
+                  <option value="1년권">1년권</option>
+                </select>
+              </div>
+            </div>
+            <div class="reg-form-group">
+              <label>시작일</label>
+              <div class="reg-input-wrap">
+                <i class="fas fa-calendar-alt"></i>
+                <input type="date" id="regStart" />
+              </div>
+            </div>
+          </div>
+
+          <div class="reg-form-group">
+            <label>메모 <span class="reg-hint">(요청사항 등)</span></label>
+            <div class="reg-input-wrap textarea">
+              <i class="fas fa-comment-alt"></i>
+              <textarea id="regMemo" rows="2"
+                placeholder="요청사항이나 특이사항을 입력해주세요."></textarea>
+            </div>
+          </div>
+
+          <div class="reg-form-notice" id="regErrorNotice" style="display:none;background:#fee2e2;border-color:#fca5a5;color:#991b1b">
+            <i class="fas fa-exclamation-triangle" style="color:#ef4444"></i>
+            <span id="regErrorMsg"></span>
+          </div>
+
+          <div class="reg-form-notice">
+            <i class="fas fa-info-circle"></i>
+            등록 후 관리자 승인이 완료되면 로그인하실 수 있습니다.
+          </div>
+
+          <div class="reg-form-actions">
+            <button type="button" class="reg-btn-cancel" onclick="closeRegisterModal()">
+              취소
+            </button>
+            <button type="submit" class="reg-btn-submit">
+              <i class="fas fa-check"></i> 등록 신청
+            </button>
+          </div>
+
+        </form>
+      </div>
+    </div>
+  </div><!-- /regOverlay -->
 
     <!-- 관리자 바로가기 -->
     <a href="index.html" class="login-admin-link">
@@ -304,12 +411,12 @@
         <div class="s-footer-info">
           <span id="footerName">스터디카페 길</span>
           <span class="s-sep">|</span>
-          <span id="footerAddr">서울시 강남구 테헤란로 123</span>
+          <span id="footerAddr">경기도 안산시 상록구 예술광장1로 94</span>
           <span class="s-sep">|</span>
-          <span id="footerPhone">02-1234-5678</span>
+          <span id="footerPhone">010-5473-0761</span>
         </div>
         <div class="s-footer-time">
-          운영시간 <strong id="footerHours">06:00 ~ 24:00</strong>
+          운영시간 <strong id="footerHours">15:00 ~ 24:00</strong>
         </div>
       </div>
     </footer>
@@ -327,5 +434,6 @@
   </div>
 
   <script src="src/js/student.js"></script>
+  <script src="src/js/student-register.js"></script>
 </body>
 </html>
