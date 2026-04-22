@@ -814,7 +814,7 @@ function closeOverlay() {
 // ============================================================
 function applyRoomSettings() {
   try {
-    const storedName  = localStorage.getItem('studyRoomName')    || '열공 독서실';
+    const storedName  = localStorage.getItem('studyRoomName')    || '스터디카페 길';
     const storedAddr  = localStorage.getItem('studyRoomAddress') || '서울시 강남구 테헤란로 123';
     const storedPhone = localStorage.getItem('studyRoomPhone')   || '02-1234-5678';
     const storedHours = localStorage.getItem('studyRoomHours')   || '06:00 ~ 23:59';
