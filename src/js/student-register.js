@@ -77,9 +77,12 @@ function autoCalcExpiry() {
 }
 
 // ============================================================
+// DB API URL (student.js와 동일)
+const REG_DB_API = 'http://admin.agunge.co.kr/studycafe/members.php';
+
 // 등록 제출
 // ============================================================
-function submitRegister(e) {
+async function submitRegister(e) {
   e.preventDefault();
 
   const name   = (document.getElementById('regName').value   || '').trim();
@@ -100,21 +103,6 @@ function submitRegister(e) {
     return;
   }
 
-  // localStorage에서 최신 state 불러오기
-  let st = null;
-  try { st = JSON.parse(localStorage.getItem('studyroom_state')); } catch(err) {}
-  if (!st) st = { members: [], seats: [], payments: [], lockers: [], totalSeats: 48 };
-  if (!st.members) st.members = [];
-
-  // 중복 체크 (이름 + 전화번호 동일한 회원)
-  const dup = st.members.find(m =>
-    m.name === name && m.phone && m.phone.replace(/\D/g,'') === phoneNorm.replace(/\D/g,'')
-  );
-  if (dup) {
-    showRegError('이미 등록된 회원입니다. 관리자에게 문의해주세요.');
-    return;
-  }
-
   // 만료일 계산
   let expiry = '';
   if (ticket && start && REG_TICKET_MAP[ticket]) {
@@ -123,9 +111,41 @@ function submitRegister(e) {
     expiry = d.toISOString().slice(0, 10);
   }
 
-  // 신규 회원 객체 생성 (관리자와 동일한 구조)
+  const id = Date.now().toString();
+
+  // ── DB에 먼저 저장 시도 ──
+  let dbSaved = false;
+  try {
+    const res = await fetch(REG_DB_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        name,
+        phone:       phoneNorm,
+        ticket:      ticket || null,
+        start_date:  start  || todayStr(),
+        expiry_date: expiry || null,
+        memo:        memo   || '학생 페이지 직접 등록',
+        status:      'active',
+      }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      dbSaved = true;
+    } else {
+      // DB 중복 오류 등
+      showRegError(json.message || '등록에 실패했습니다.');
+      return;
+    }
+  } catch(err) {
+    // 네트워크 오류 시 localStorage 폴백
+    console.warn('DB 저장 실패, localStorage 폴백:', err);
+  }
+
+  // ── localStorage에도 저장 (오프라인 폴백 / 관리자 페이지 즉시 반영) ──
   const newMember = {
-    id:     Date.now().toString(),
+    id,
     name,
     phone:  phoneNorm,
     seatNo: null,
@@ -133,15 +153,25 @@ function submitRegister(e) {
     start:  start  || todayStr(),
     expiry: expiry || '',
     memo:   memo   || '학생 페이지 직접 등록',
+    status: 'active',
   };
+
+  let st = null;
+  try { st = JSON.parse(localStorage.getItem('studyroom_state')); } catch(err2) {}
+  if (!st) st = { members: [], seats: [], payments: [], lockers: [], totalSeats: 48 };
+  if (!st.members) st.members = [];
+
+  // DB 저장 실패 시에만 중복 체크 (DB가 거절했으면 이미 return됨)
+  if (!dbSaved) {
+    const dup = st.members.find(m =>
+      m.name === name && m.phone && m.phone.replace(/\D/g,'') === phoneNorm.replace(/\D/g,'')
+    );
+    if (dup) { showRegError('이미 등록된 회원입니다. 관리자에게 문의해주세요.'); return; }
+  }
 
   st.members.push(newMember);
   localStorage.setItem('studyroom_state', JSON.stringify(st));
-
-  // gState 동기화 (student.js 변수)
-  if (typeof gState !== 'undefined' && gState) {
-    gState.members = st.members;
-  }
+  if (typeof gState !== 'undefined' && gState) gState.members = st.members;
 
   // 성공 화면 표시
   showRegSuccess(name, ticket, expiry);

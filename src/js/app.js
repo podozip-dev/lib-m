@@ -104,6 +104,220 @@ const SEAT_LAYOUT = [
 ];
 
 // ============================================================
+// DB API 설정
+// ============================================================
+const API_BASE    = 'http://admin.agunge.co.kr/studycafe';
+const DB_API      = API_BASE + '/members.php';
+const PAY_API     = API_BASE + '/payments.php';
+const SEAT_API    = API_BASE + '/seats.php';
+const LOCKER_API  = API_BASE + '/lockers.php';
+const SETTING_API = API_BASE + '/settings.php';
+
+// ── 회원 API ──────────────────────────────────────────────────
+async function dbSaveMember(member, isEdit) {
+  try {
+    const body = {
+      id: member.id, name: member.name, phone: member.phone,
+      seat_no: member.seatNo || null, ticket: member.ticket || null,
+      start_date: member.start || null, expiry_date: member.expiry || null,
+      memo: member.memo || null, status: member.status || 'active',
+    };
+    const res = await fetch(DB_API + (isEdit ? '?id=' + member.id : ''), {
+      method: isEdit ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json();
+    if (!json.success) console.warn('회원 DB 저장 실패:', json.message);
+    return json.success;
+  } catch(e) { console.error('회원 API 오류:', e); return false; }
+}
+
+async function dbDeleteMember(id) {
+  try {
+    const res = await fetch(DB_API + '?id=' + id, { method: 'DELETE' });
+    return (await res.json()).success;
+  } catch(e) { return false; }
+}
+
+// ── 결제 API ──────────────────────────────────────────────────
+async function dbSavePayment(payment) {
+  try {
+    const res = await fetch(PAY_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id:          payment.id,
+        member_id:   payment.memberId,
+        member_name: payment.memberName,
+        ticket:      payment.ticket,
+        amount:      payment.amount,
+        method:      payment.method || '현금',
+        pay_date:    payment.date || today(),
+        memo:        payment.memo || null,
+      }),
+    });
+    const json = await res.json();
+    if (!json.success) console.warn('결제 DB 저장 실패:', json.message);
+    return json.success;
+  } catch(e) { console.error('결제 API 오류:', e); return false; }
+}
+
+async function dbDeletePayment(id) {
+  try {
+    const res = await fetch(PAY_API + '?id=' + id, { method: 'DELETE' });
+    return (await res.json()).success;
+  } catch(e) { return false; }
+}
+
+// ── 좌석 API ──────────────────────────────────────────────────
+async function dbUpdateSeat(seatId, data) {
+  try {
+    const body = Object.assign({ id: seatId }, data);
+    const res = await fetch(SEAT_API + '?id=' + seatId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return (await res.json()).success;
+  } catch(e) { return false; }
+}
+
+// ── 락커 API ──────────────────────────────────────────────────
+async function dbUpdateLocker(lockerId, data) {
+  try {
+    const body = Object.assign({ id: lockerId }, data);
+    const res = await fetch(LOCKER_API + '?id=' + lockerId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return (await res.json()).success;
+  } catch(e) { return false; }
+}
+
+// ── 설정 API ──────────────────────────────────────────────────
+async function dbSaveSettings(settingsObj) {
+  try {
+    const res = await fetch(SETTING_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settingsObj),
+    });
+    return (await res.json()).success;
+  } catch(e) { return false; }
+}
+
+// ── 전체 DB → localStorage 동기화 (앱 시작 시) ──────────────
+async function syncDbToLocal() {
+  try {
+    // 1) 회원 동기화
+    const mRes = await fetch(DB_API);
+    const mJson = await mRes.json();
+    if (mJson.success && Array.isArray(mJson.data) && mJson.data.length) {
+      const dbMembers = mJson.data.map(m => ({
+        id: m.id, name: m.name, phone: m.phone,
+        seatNo: m.seat_no ? Number(m.seat_no) : null,
+        ticket: m.ticket || '', start: m.start_date || '',
+        expiry: m.expiry_date || '', memo: m.memo || '',
+        status: m.status || 'active',
+      }));
+      const dbIds = new Set(dbMembers.map(m => m.id));
+      state.members = [...dbMembers, ...state.members.filter(m => !dbIds.has(m.id))];
+    }
+
+    // 2) 결제 동기화
+    const pRes = await fetch(PAY_API);
+    const pJson = await pRes.json();
+    if (pJson.success && Array.isArray(pJson.data) && pJson.data.length) {
+      const dbPays = pJson.data.map(p => ({
+        id: p.id, memberId: p.member_id, memberName: p.member_name,
+        ticket: p.ticket, amount: Number(p.amount),
+        method: p.method, date: p.pay_date, memo: p.memo || '',
+      }));
+      const dbPayIds = new Set(dbPays.map(p => p.id));
+      state.payments = [...dbPays, ...state.payments.filter(p => !dbPayIds.has(p.id))];
+    }
+
+    // 3) 좌석 동기화
+    const sRes = await fetch(SEAT_API);
+    const sJson = await sRes.json();
+    if (sJson.success && Array.isArray(sJson.data)) {
+      sJson.data.forEach(dbSeat => {
+        const local = state.seats.find(s => s.id === Number(dbSeat.id));
+        if (local && dbSeat.status !== 'available') {
+          local.status     = dbSeat.status;
+          local.memberId   = dbSeat.member_id   || null;
+          local.memberName = dbSeat.member_name || null;
+          local.since      = dbSeat.since       || null;
+        }
+      });
+    }
+
+    // 4) 락커 동기화
+    const lRes = await fetch(LOCKER_API);
+    const lJson = await lRes.json();
+    if (lJson.success && Array.isArray(lJson.data)) {
+      lJson.data.forEach(dbLocker => {
+        const local = state.lockers.find(l => l.id === Number(dbLocker.id));
+        if (local && dbLocker.status !== 'available') {
+          local.status     = dbLocker.status;
+          local.memberId   = dbLocker.member_id   || null;
+          local.memberName = dbLocker.member_name || null;
+          local.since      = dbLocker.since       || null;
+        }
+      });
+    }
+
+    // 5) 설정 동기화
+    const stRes = await fetch(SETTING_API);
+    const stJson = await stRes.json();
+    if (stJson.success && stJson.data) {
+      const d = stJson.data;
+      if (d.total_seats)   state.totalSeats   = Number(d.total_seats);
+      if (d.total_lockers) state.totalLockers = Number(d.total_lockers);
+      if (d.room_name)     localStorage.setItem('studyroom_name', d.room_name);
+      if (d.tickets && Array.isArray(d.tickets)) {
+        tickets = d.tickets;
+        localStorage.setItem('studyroom_tickets', JSON.stringify(tickets));
+      }
+    }
+
+    saveState();
+  } catch(e) { console.warn('DB 동기화 실패 (localStorage 유지):', e); }
+}
+
+// ── localStorage → DB 일괄 동기화 ───────────────────────────
+async function syncLocalToDb() {
+  try {
+    if (state.members.length) {
+      await fetch(DB_API + '?action=sync', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ members: state.members }),
+      });
+    }
+    if (state.payments.length) {
+      await fetch(PAY_API + '?action=sync', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payments: state.payments }),
+      });
+    }
+    if (state.seats.length) {
+      await fetch(SEAT_API + '?action=sync', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ seats: state.seats }),
+      });
+    }
+    if (state.lockers.length) {
+      await fetch(LOCKER_API + '?action=sync', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lockers: state.lockers }),
+      });
+    }
+  } catch(e) { console.warn('일괄 동기화 실패:', e); }
+}
+
+// ============================================================
 // UTILITY FUNCTIONS
 // ============================================================
 const $ = id => document.getElementById(id);
@@ -577,13 +791,16 @@ function confirmAssignSeat(seatId) {
   if (!seat || !member) return;
   // free previous seat if any
   const prevSeat = state.seats.find(s => s.memberId == memberId && s.status !== 'available');
-  if (prevSeat) { prevSeat.status = 'available'; prevSeat.memberId = null; prevSeat.memberName = null; prevSeat.since = null; }
-  seat.status = 'occupied';
-  seat.memberId = member.id;
-  seat.memberName = member.name;
-  seat.since = new Date().toISOString();
+  if (prevSeat) {
+    prevSeat.status = 'available'; prevSeat.memberId = null; prevSeat.memberName = null; prevSeat.since = null;
+    dbUpdateSeat(prevSeat.id, { status: 'available', member_id: null, member_name: null, since: null });
+  }
+  const sinceVal = new Date().toISOString();
+  seat.status = 'occupied'; seat.memberId = member.id; seat.memberName = member.name; seat.since = sinceVal;
   member.seatNo = seatId;
   saveState();
+  dbUpdateSeat(seatId, { status: 'occupied', member_id: member.id, member_name: member.name, since: sinceVal }); // DB
+  dbSaveMember(member, true); // 회원 seatNo DB 반영
   showToast(`${seatId}번 좌석에 ${member.name} 회원이 배정되었습니다.`);
   closeModal('seatModal');
   renderSeatMap();
@@ -594,12 +811,10 @@ function vacateSeat(seatId) {
   const seat = state.seats.find(s => s.id === seatId);
   if (!seat) return;
   const m = state.members.find(m => m.id === seat.memberId);
-  if (m) m.seatNo = null;
-  seat.status = 'available';
-  seat.memberId = null;
-  seat.memberName = null;
-  seat.since = null;
+  if (m) { m.seatNo = null; dbSaveMember(m, true); }
+  seat.status = 'available'; seat.memberId = null; seat.memberName = null; seat.since = null;
   saveState();
+  dbUpdateSeat(seatId, { status: 'available', member_id: null, member_name: null, since: null }); // DB
   showToast(`${seatId}번 좌석이 퇴실 처리되었습니다.`);
   closeModal('seatModal');
   renderSeatMap();
@@ -611,6 +826,7 @@ function reserveSeat(seatId) {
   if (!seat) return;
   seat.status = 'reserved';
   saveState();
+  dbUpdateSeat(seatId, { status: 'reserved' }); // DB
   showToast(`${seatId}번 좌석이 예약 상태로 변경되었습니다.`, 'info');
   closeModal('seatModal');
   renderSeatMap();
@@ -619,9 +835,10 @@ function reserveSeat(seatId) {
 function occupySeat(seatId) {
   const seat = state.seats.find(s => s.id === seatId);
   if (!seat) return;
-  seat.status = 'occupied';
-  seat.since = new Date().toISOString();
+  const sinceVal = new Date().toISOString();
+  seat.status = 'occupied'; seat.since = sinceVal;
   saveState();
+  dbUpdateSeat(seatId, { status: 'occupied', since: sinceVal }); // DB
   showToast(`${seatId}번 좌석 입실 처리 완료`);
   closeModal('seatModal');
   renderSeatMap();
@@ -637,13 +854,16 @@ function assignQuickSeat() {
   if (seat.status !== 'available') { showToast('해당 좌석은 이미 사용 중입니다.', 'error'); return; }
   const member = state.members.find(m => m.id == memberId);
   const prevSeat = state.seats.find(s => s.memberId == memberId && s.status !== 'available');
-  if (prevSeat) { prevSeat.status = 'available'; prevSeat.memberId = null; prevSeat.memberName = null; prevSeat.since = null; }
-  seat.status = 'occupied';
-  seat.memberId = member.id;
-  seat.memberName = member.name;
-  seat.since = new Date().toISOString();
+  if (prevSeat) {
+    prevSeat.status = 'available'; prevSeat.memberId = null; prevSeat.memberName = null; prevSeat.since = null;
+    dbUpdateSeat(prevSeat.id, { status: 'available', member_id: null, member_name: null, since: null });
+  }
+  const qSince = new Date().toISOString();
+  seat.status = 'occupied'; seat.memberId = member.id; seat.memberName = member.name; seat.since = qSince;
   member.seatNo = seatNo;
   saveState();
+  dbUpdateSeat(seatNo, { status: 'occupied', member_id: member.id, member_name: member.name, since: qSince }); // DB
+  dbSaveMember(member, true); // 회원 seatNo DB 반영
   showToast(`${member.name} 회원 → ${seatNo}번 좌석 배정 완료`);
   closeModal('quickSeatModal');
   renderDashboard();
@@ -727,9 +947,12 @@ function saveMember(e) {
   if (existing) {
     Object.assign(existing, { name, phone, seatNo, ticket, start, expiry, memo });
     showToast('회원 정보가 수정되었습니다.', 'info');
+    dbSaveMember(existing, true); // DB 수정
   } else {
-    state.members.push({ id, name, phone, seatNo, ticket, start, expiry, memo });
+    const newMember = { id, name, phone, seatNo, ticket, start, expiry, memo, status: 'active' };
+    state.members.push(newMember);
     showToast(`${name} 회원이 등록되었습니다.`);
+    dbSaveMember(newMember, false); // DB 신규 저장
   }
   saveState();
   closeModal('memberModal');
@@ -748,6 +971,7 @@ function deleteMember(id) {
     if (seat) { seat.status = 'available'; seat.memberId = null; seat.memberName = null; seat.since = null; }
     state.members = state.members.filter(m => m.id !== id);
     saveState();
+    dbDeleteMember(id); // DB 삭제
     showToast('회원이 삭제되었습니다.', 'warning');
     closeModal('confirmModal');
     renderMemberTable($('memberSearch').value);
@@ -820,8 +1044,10 @@ function savePayment(e) {
   if (!member) return;
 
   const id = Date.now().toString();
-  state.payments.push({ id, memberId, memberName: member.name, ticket, amount, method, date, memo });
+  const newPayment = { id, memberId, memberName: member.name, ticket, amount, method, date, memo };
+  state.payments.push(newPayment);
   saveState();
+  dbSavePayment(newPayment); // DB 저장
   showToast(`${member.name} 회원 수납이 등록되었습니다.`);
   closeModal('paymentModal');
   renderPaymentTable($('paymentSearch').value);
@@ -833,6 +1059,7 @@ function deletePayment(id) {
   $('confirmBtn').onclick = () => {
     state.payments = state.payments.filter(p => p.id !== id);
     saveState();
+    dbDeletePayment(id); // DB 삭제
     showToast('수납 내역이 삭제되었습니다.', 'warning');
     closeModal('confirmModal');
     renderPaymentTable($('paymentSearch').value);
@@ -907,6 +1134,7 @@ function assignLocker(lockerId) {
   locker.memberName = member.name;
   locker.since = today();
   saveState();
+  dbUpdateLocker(lockerId, { status: 'occupied', member_id: member.id, member_name: member.name, since: today() }); // DB 저장
   showToast(`락커 ${lockerId}번 → ${member.name} 배정 완료`);
   closeModal('lockerModal');
   renderLockerGrid();
@@ -920,6 +1148,7 @@ function releaseLocker(lockerId) {
   locker.memberName = null;
   locker.since = null;
   saveState();
+  dbUpdateLocker(lockerId, { status: 'available', member_id: null, member_name: null, since: null }); // DB 저장
   showToast(`락커 ${lockerId}번 반납 처리 완료`);
   closeModal('lockerModal');
   renderLockerGrid();
@@ -965,27 +1194,50 @@ function removeTicket(i) {
   renderTicketPrices();
 }
 
+/** 독서실 정보 저장 (localStorage + DB) */
+function saveRoomInfo() {
+  const name    = ($('studyRoomName')    || {}).value || '';
+  const address = ($('studyRoomAddress') || {}).value || '';
+  const phone   = ($('studyRoomPhone')   || {}).value || '';
+  const open    = ($('openTime')         || {}).value || '';
+  const close   = ($('closeTime')        || {}).value || '';
+  // localStorage 저장
+  if (name) localStorage.setItem('studyroom_name', name);
+  // DB 저장
+  dbSaveSettings({ room_name: name, address, phone, open_time: open, close_time: close });
+  showToast('독서실 정보가 저장되었습니다.');
+}
+
+/** 이용권 요금 저장 (localStorage + DB) */
+function saveTickets() {
+  localStorage.setItem('studyroom_tickets', JSON.stringify(tickets));
+  dbSaveSettings({ tickets });
+  showToast('이용권 요금이 저장되었습니다.');
+}
+
 function applySeatsSettings() {
   const total = parseInt($('totalSeats').value);
   const perRow = parseInt($('seatsPerRow').value);
   if (!total || !perRow) return;
-  const confirm = window.confirm(`좌석 수를 ${total}석으로 변경하시겠습니까? 기존 좌석 현황이 초기화됩니다.`);
-  if (!confirm) return;
+  const confirmed = window.confirm(`좌석 수를 ${total}석으로 변경하시겠습니까? 기존 좌석 현황이 초기화됩니다.`);
+  if (!confirmed) return;
   state.totalSeats = total;
   state.seatsPerRow = perRow;
   initSeats();
   saveState();
+  dbSaveSettings({ total_seats: total }); // DB 저장
   showToast('좌석 설정이 적용되었습니다.');
 }
 
 function applyLockerSettings() {
   const total = parseInt($('totalLockers').value);
   if (!total) return;
-  const confirm = window.confirm(`락커 수를 ${total}개로 변경하시겠습니까? 기존 락커 현황이 초기화됩니다.`);
-  if (!confirm) return;
+  const confirmed = window.confirm(`락커 수를 ${total}개로 변경하시겠습니까? 기존 락커 현황이 초기화됩니다.`);
+  if (!confirmed) return;
   state.totalLockers = total;
   initLockers();
   saveState();
+  dbSaveSettings({ total_lockers: total }); // DB 저장
   showToast('락커 설정이 적용되었습니다.');
 }
 
@@ -1185,4 +1437,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initial render
   renderDashboard();
   updateMemberSelects();
+
+  // DB ↔ localStorage 양방향 동기화 (앱 시작 시)
+  // 1) 먼저 localStorage 데이터를 DB에 올림 (초기 마이그레이션)
+  syncLocalToDb().then(() => {
+    // 2) DB 최신 데이터를 받아 UI 갱신
+    return syncDbToLocal();
+  }).then(() => {
+    renderDashboard();
+    renderMemberTable('');
+    renderLockerGrid();
+    renderSeatMap();
+    updateMemberSelects();
+    renderSettings();
+  });
 });

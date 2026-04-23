@@ -17,6 +17,22 @@ const SEAT_LAYOUT = [
   { id: 'zone-bottom-left', rows: [[25,26,27,28]] },
 ];
 
+// ── DB API URLs ──
+const DB_API    = 'http://admin.agunge.co.kr/studycafe/members.php';
+const SEAT_API_S = 'http://admin.agunge.co.kr/studycafe/seats.php';
+
+/** 학생 페이지에서 좌석 상태 DB 업데이트 */
+async function dbUpdateSeatStudent(seatId, data) {
+  try {
+    const res = await fetch(SEAT_API_S + '?id=' + seatId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ id: seatId }, data)),
+    });
+    return (await res.json()).success;
+  } catch(e) { return false; }
+}
+
 // ── State ──
 let gState = null;
 
@@ -118,22 +134,79 @@ function initTabs() {
 // ══════════════════════════════════════════════════════════
 // ============================================================
 
+/** DB에서 회원 검색 (이름 자동완성용) */
+async function dbSearchMembers(keyword) {
+  try {
+    const res = await fetch(DB_API + '?search=' + encodeURIComponent(keyword));
+    const json = await res.json();
+    if (json.success && Array.isArray(json.data)) {
+      // DB 데이터를 localStorage 형식으로 변환
+      return json.data.map(m => ({
+        id:     m.id,
+        name:   m.name,
+        phone:  m.phone,
+        seatNo: m.seat_no ? Number(m.seat_no) : null,
+        ticket: m.ticket || '',
+        start:  m.start_date || '',
+        expiry: m.expiry_date || '',
+        status: m.status || 'active',
+      }));
+    }
+  } catch(e) { /* DB 오류 시 localStorage 폴백 */ }
+  return null;
+}
+
+/** DB에서 로그인 검증 */
+async function dbLogin(name, phone4) {
+  try {
+    const res = await fetch(DB_API + '?name=' + encodeURIComponent(name) + '&phone4=' + phone4);
+    const json = await res.json();
+    if (json.success && json.data) {
+      return {
+        id:     json.data.id,
+        name:   json.data.name,
+        phone:  json.data.phone,
+        seatNo: json.data.seat_no ? Number(json.data.seat_no) : null,
+        ticket: json.data.ticket || '',
+        start:  json.data.start_date || '',
+        expiry: json.data.expiry_date || '',
+        memo:   json.data.memo || '',
+        status: json.data.status || 'active',
+      };
+    }
+    return null;
+  } catch(e) { return null; }
+}
+
+/** DB에서 이름만 있는지 확인 (전화번호 불일치 vs 미등록 구분) */
+async function dbCheckNameExists(name) {
+  try {
+    const res = await fetch(DB_API + '?search=' + encodeURIComponent(name));
+    const json = await res.json();
+    if (json.success && Array.isArray(json.data)) {
+      return json.data.some(m => m.name === name);
+    }
+  } catch(e) { /* ignore */ }
+  return false;
+}
+
 /** 이름 입력 자동완성 */
 function initLoginNameInput() {
   const input = document.getElementById('loginNameInput');
   const suggest = document.getElementById('loginSuggest');
   const clearBtn = document.getElementById('loginNameClearBtn');
 
-  input.addEventListener('input', () => {
+  input.addEventListener('input', async () => {
     const val = input.value.trim();
     clearBtn.style.display = val ? '' : 'none';
-    // 자동완성 — 2자 이상 입력 시
     if (val.length >= 1) {
-      loadSharedState();
-      const matched = gState.members.filter(m =>
-        m.name && m.name.includes(val)
-      ).slice(0, 6);
-      renderSuggest(matched);
+      // DB 우선 검색, 실패 시 localStorage 폴백
+      let matched = await dbSearchMembers(val);
+      if (matched === null) {
+        loadSharedState();
+        matched = gState.members.filter(m => m.name && m.name.includes(val)).slice(0, 6);
+      }
+      renderSuggest(matched.slice(0, 6));
     } else {
       suggest.innerHTML = '';
     }
@@ -234,8 +307,7 @@ function hideLoginError() {
 }
 
 /** 로그인 처리 메인 */
-function doLogin() {
-  loadSharedState();
+async function doLogin() {
   const name = document.getElementById('loginNameInput').value.trim();
   const phone4 = loginPhoneDigits;
 
@@ -250,29 +322,34 @@ function doLogin() {
     return;
   }
 
-  // 이름 + 전화번호 뒷4자리로 회원 조회
-  const matched = gState.members.filter(m => {
-    const nameMatch = m.name && m.name === name;
-    const phoneMatch = m.phone && m.phone.replace(/\D/g,'').endsWith(phone4);
-    return nameMatch && phoneMatch;
-  });
+  // ─── DB 우선 로그인 시도 ───
+  let member = await dbLogin(name, phone4);
 
-  if (!matched.length) {
-    // 이름만 맞고 전화번호가 다른 경우 구분 메시지
-    const nameOnly = gState.members.filter(m => m.name === name);
-    if (nameOnly.length) {
-      // 이름은 존재 → 전화번호 불일치 (등록 버튼 불필요)
+  if (!member) {
+    // DB 실패 시 localStorage 폴백
+    loadSharedState();
+    const matched = gState.members.filter(m => {
+      const nameMatch = m.name && m.name === name;
+      const phoneMatch = m.phone && m.phone.replace(/\D/g,'').endsWith(phone4);
+      return nameMatch && phoneMatch;
+    });
+    if (matched.length) member = matched[0];
+  }
+
+  if (!member) {
+    // 이름만 있는지 확인 (DB + localStorage)
+    const nameInDb  = await dbCheckNameExists(name);
+    loadSharedState();
+    const nameInLocal = gState.members.some(m => m.name === name);
+    if (nameInDb || nameInLocal) {
       showLoginError('전화번호가 일치하지 않습니다. 다시 확인해주세요.', false);
     } else {
-      // 이름 자체가 없음 → 미등록 회원 → 회원등록 버튼 노출
       showLoginError('등록된 회원 정보가 없습니다. 회원 등록을 진행해주세요.', true);
     }
     loginPhoneDigits = '';
     updatePhoneDots();
     return;
   }
-
-  const member = matched[0];
 
   // 이용권 만료 확인
   const days = daysDiff(member.expiry);
@@ -400,11 +477,14 @@ function doSelfCheckin() {
   const seat = gState.seats.find(s => s.id === Number(m.seatNo));
   if (!seat) { showOverlay('error', '<i class="fas fa-times-circle"></i>', '오류', '좌석 정보를 찾을 수 없습니다.'); return; }
 
+  const sinceVal = new Date().toISOString();
   seat.status = 'occupied';
   seat.memberId = m.id;
   seat.memberName = m.name;
-  seat.since = new Date().toISOString();
+  seat.since = sinceVal;
   saveSharedState();
+  // DB 업데이트
+  dbUpdateSeatStudent(seat.id, { status: 'occupied', member_id: m.id, member_name: m.name, since: sinceVal });
   gCurrentMember = m;
   updateQuickActions();
 
@@ -437,6 +517,8 @@ function doSelfCheckout() {
   seat.memberName = null;
   seat.since = null;
   saveSharedState();
+  // DB 업데이트
+  dbUpdateSeatStudent(seatId, { status: 'available', member_id: null, member_name: null, since: null });
   gCurrentMember = m;
   updateQuickActions();
 
